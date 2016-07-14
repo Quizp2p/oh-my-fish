@@ -160,7 +160,7 @@ function install_offline
       set OFFLINE_PATH "$PWD"
     else
       # We tried our best.
-      abort "Could not find local installation"
+      abort "Could not find local installation source"
     end
   end
 
@@ -269,17 +269,17 @@ end
 
 # Generates the bootstrap code used to initialize Oh My Fish on shell startup.
 function generate_bootstrap -a config_path
-echo '# Path to Oh My Fish install.
+echo "# Path to Oh My Fish install.
 set -q XDG_DATA_HOME
-  and set -gx OMF_PATH "$XDG_DATA_HOME/omf"
-  or set -gx OMF_PATH "$HOME/.local/share/omf"
+  and set -gx OMF_PATH \"\$XDG_DATA_HOME/omf\"
+  or set -gx OMF_PATH \"\$HOME/.local/share/omf\"
 
 # Customize Oh My Fish configuration path.
-#set -gx OMF_CONFIG "'$config_path'"
+#set -gx OMF_CONFIG \"$config_path\"
 
 # Load oh-my-fish configuration.
-source $OMF_PATH/init.fish
-'
+source \$OMF_PATH/init.fish
+"
 end
 
 
@@ -332,9 +332,13 @@ end
 
 # Gets the version of Fish installed.
 function get_fish_version
-  set -q FISH_VERSION
-    and echo $FISH_VERSION
-    or echo $version
+  if set -q FISH_VERSION
+    echo $FISH_VERSION
+  else if set -q version
+    echo $version
+  else
+    return 1
+  end
 end
 
 
@@ -361,7 +365,15 @@ end
 
 # Tests if the right-hand side version is equal to or greater than the left-hand side version.
 function is_version_compatible -a lhs rhs
-  test -n "$lhs" -a -n "$rhs" -a "$lhs" = (printf "$lhs\n$rhs\n" | command sort -t '.' -k 1,1 -k 2,2 -k 3,3 -k 4,4 -g)[1]
+  # Both arguments must be given.
+  set -q argv[2]
+    or return 1
+
+  # Sort the versions to get the lesser one.
+  set -l sorted (printf "$lhs\n$rhs\n" | command sort -n -t '.' -k 1,1 -k 2,2 -k 3,3 -k 4,4)
+
+  # Left-hand side must be the smallest version.
+  test "$lhs" = "$sorted[1]"
 end
 
 
